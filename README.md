@@ -18,6 +18,7 @@ The core game logic is already implemented, but you are free to modify or extend
 - [ ] Set up the network connection
 - [ ] (Optionally) Improve or change the existing game logic
 - [ ] (Optionally) Changing the network handling logic
+- [ ] (Optionally) Considering use of JSON for message format and implementing better connection management between server and socket
 
 ## 🕹️ How to Play
 
