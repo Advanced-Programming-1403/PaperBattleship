@@ -10,6 +10,15 @@
 * Hit/miss feedback and ship sinking notification
 * Simple and minimalistic design for learning and fun
 
+## 🔧 Objective
+
+The core game logic is already implemented, but you are free to modify or extend it as needed. Your main tasks are to:
+
+- [ ] Complete the TODOs in the code
+- [ ] Set up the network connection
+- [ ] (Optionally) Improve or change the existing game logic
+- [ ] (Optionally) Changing the network handling logic
+
 ## 🕹️ How to Play
 
 1. **Start the Server**
