@@ -36,6 +36,8 @@ public class Client {
             //TODO: create a ClientNetworkReceiver
             //TODO: start it in another thread
 
+            new Thread(new ClientNetworkReceiver(clientSocket , this)).start();
+
             System.out.println("Enter Username: ");
             Scanner usernameScanner = new Scanner(System.in);
 
@@ -94,12 +96,16 @@ public class Client {
     }
 
     //Actions
-    private void attack() {
+    private void attack() throws IOException {
         //TODO: send attack message to server
+        out.writeUTF("attack|" + lastEnemyRow + "," + lastEnemyCol);
+        out.flush();
         isTurn = false;
     }
     private void sendUsername(String username) throws IOException {
         //TODO: send username to server
+        out.writeUTF("Set-username|" + username);
+        out.flush();
     }
     public void setEnemyResult(boolean hit, String shipName) {
         enemyBoard[lastEnemyRow][lastEnemyCol].setEnemyShip(hit);
@@ -289,6 +295,8 @@ public class Client {
         //TODO: get IP_Address
 
         try {
+            clientSocket = new Socket("127.0.0.1", PORT_NUMBER);
+            Client client = new Client(clientSocket);
             //initialize clientSocket
             //initialize Client
         } finally {
