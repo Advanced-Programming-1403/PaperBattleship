@@ -12,6 +12,7 @@ public class Client {
     private static final String IP_ADDRESS = "127.0.0.1";
     private static final int PORT_NUMBER = 3737;
     static final int SIZE = 10;
+    private int numberOfSankBattleShips = 0;
     static final Random rand = new Random();
 
     private final Socket clientSocket;
@@ -31,11 +32,8 @@ public class Client {
         this.clientSocket = clientSocket;
 
         try {
-            //TODO: initialize out
             this.out = new DataOutputStream(clientSocket.getOutputStream());
-            //TODO: create a ClientNetworkReceiver
-            //TODO: start it in another thread
-
+            new Thread(new ClientNetworkReceiver(clientSocket, this)).start();
             System.out.println("Enter Username: ");
             Scanner usernameScanner = new Scanner(System.in);
 
@@ -87,6 +85,10 @@ public class Client {
 
                 System.out.println("Move is being sent. Waiting for processing");
                 attack();
+                if (numberOfSankBattleShips == 5) {
+                    finishGame(false);
+                    break;
+                }
             }
         } catch (IOException e) {
             System.out.println("Could not connect to the server!\n\n");
@@ -94,12 +96,14 @@ public class Client {
     }
 
     //Actions
-    private void attack() {
-        //TODO: send attack message to server
+    private void attack() throws IOException{
+        out.writeUTF("attack|" + lastEnemyRow + "," + lastEnemyCol);
+        out.flush();
         isTurn = false;
     }
     private void sendUsername(String username) throws IOException {
-        //TODO: send username to server
+        out.writeUTF("set-username|" + username);
+        out.flush();
     }
     public void setEnemyResult(boolean hit, String shipName) {
         enemyBoard[lastEnemyRow][lastEnemyCol].setEnemyShip(hit);
@@ -114,8 +118,16 @@ public class Client {
     public void setOtherPlayerJoined() {
         otherPlayerJoined = true;
     }
-    public void finishGame(boolean won){
-        //TODO:
+
+    public void finishGame(boolean won) throws IOException {
+        if (won) {
+            System.out.println("You WIN!");
+        }
+        else {
+            out.writeUTF("game-result|LOST");
+            out.flush();
+            System.out.println("You LOST");
+        }
     }
     public String getHit(int row, int col){
         String message = "";
@@ -123,6 +135,7 @@ public class Client {
         String sankBattleShipName = "NONE";
         if(playerBoard[row][col].isShip() && playerBoard[row][col].getBattleShip().isAllHit()){
             sankBattleShipName = playerBoard[row][col].getBattleShip().getType();
+            numberOfSankBattleShips++;
         }
         message = playerBoard[row][col].isShip() ? ("HIT," + sankBattleShipName) : "MISS,NONE";
         printBoards();
@@ -289,8 +302,8 @@ public class Client {
         //TODO: get IP_Address
 
         try {
-            //initialize clientSocket
-            //initialize Client
+            clientSocket = new Socket(IP_ADDRESS, PORT_NUMBER);
+            Client client = new Client(clientSocket);
         } finally {
             try {
                 if (clientSocket != null) {

@@ -3,40 +3,62 @@ package Client;
 import java.io.DataInputStream;
 import java.io.IOException;
 import java.net.Socket;
+import java.util.Objects;
 
 public class ClientNetworkReceiver implements Runnable{
+
+    private Socket clientSocket;
     private Client client;
     private DataInputStream in;
 
     public ClientNetworkReceiver(Socket clientSocket, Client client) throws IOException {
-        // initialize client
-        // initialize in
+        this.clientSocket = clientSocket;
+        this.client = client;
+        in = new DataInputStream(clientSocket.getInputStream());
     }
     @Override
     public void run() {
         while(true) {
-                //TODO: get response
-                String response = "";
-
-                if(false) // TODO: set player number ( 0 or 1)
+            try {
+                String response = in.readUTF();
+                if(response.startsWith("set-player-number"))
                 {
-                    int number = 0;
+                    response = response.replace("set-player-number|", "");
+                    int number = Integer.parseInt(response);
                     client.setPlayerNumber(number);
                 }
-                else if(false) // TODO: other player joined the game
+                else if(response.startsWith("enemy-joined"))
                 {
                     client.setOtherPlayerJoined();
                 }
-                else if(false){ // TODO: handle incoming hit
-                    int row = 0; //TODO: extract row
-                    int col = 0; //TODO: extract col
+                else if(response.startsWith("incoming-attack")){
+                    //"incoming-attack|row,col
+                    response = response.replace("incoming-attack|" , "");
+                    int row = Integer.parseInt(response.split(",")[0]);
+                    int col = Integer.parseInt(response.split(",")[1]);
                     String message = client.getHit(row, col);
-                    //TODO: inform server
+                    client.out.writeUTF("attack-result|" + message);
+                    client.out.flush();
                 }
-                else if(false) //TODO: handle hit result from opponent
+                else if(response.startsWith("enemy-result"))
                 {
-                    client.setEnemyResult(false, "NONE");
+                    //enemy-result|HIT,SHIPNAME
+                    //enemy-result|HIT,NONE
+                    //enemy-result|MISS,NONE
+                    response = response.replace("enemy-result|", "");
+                    client.setEnemyResult(Objects.equals(response.split(",")[0], "HIT"), response.split(",")[1]);
                 }
+                else if (response.startsWith("game-result")) {
+                    //game-result|WON
+                    //game-result|LOST
+                    String message = response.replace("game-result|", "");
+                    client.finishGame(message.equals("WON"));
+                    break;
+                }
+            } catch (IOException e) {
+                throw new RuntimeException(e);
             }
         }
     }
+}
+
