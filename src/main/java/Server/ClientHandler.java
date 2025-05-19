@@ -10,11 +10,17 @@ public class ClientHandler implements Runnable {
     private DataInputStream in;
     private DataOutputStream out;
     private boolean isFirst;
+    private boolean usernameSet;
     private String username;
     ClientHandler enemy;
 
     public void sendData(String request) {
-        //TODO: write to output and flush
+        try {
+            out.writeUTF(request);
+            out.flush();
+        } catch (IOException e) {
+            System.out.println(e.getMessage());
+        }
     }
 
     public void setEnemy(ClientHandler enemy) throws IOException {
@@ -26,40 +32,77 @@ public class ClientHandler implements Runnable {
     }
 
     public ClientHandler(Socket client, boolean isFirst) throws IOException {
-        //initialize client
-        //initialize in
-        //initialize out
-        //initialize isFirst
+        this.client = client;
+        this.isFirst = isFirst;
+        this.usernameSet = false;
+        in = new DataInputStream(client.getInputStream());
+        out = new DataOutputStream(client.getOutputStream());
     }
 
     public void run() {
         try {
             while(true) {
-                // TODO: Read a UTF-encoded string from the client
-                String request = "";
-                if (false) { //TODO: Set Username
-                    int playerNumber = isFirst?0:1;
-                    // TODO: Send player number to client
+                String request = in.readUTF();
+                if (request.startsWith("set-username")) {
 
-                    username = "";//TODO extract username
-                    //TODO: wait till enemy is specified
-                    //TODO: tell the clients that the other player joined
+                    int playerNumber = isFirst?0:1;
+                    username = request.replace("set-username|", "");
+                    out.writeUTF("set-player-number|" + playerNumber);
+                    out.flush();
+                    this.usernameSet = true;
+
+                    while (enemy == null) {
+                        Thread.onSpinWait();
+                    }
+                    while (!enemy.isUsernameSet()) {
+                        Thread.onSpinWait();
+                    }
+
+                    out.writeUTF("enemy-joined");
+                    out.flush();
                 }
-                else if (false) { //TODO: Handle Attack
-                    int row = 0;//TODO: extract row and col
-                    int col = 0;//TODO: extract row and col
-                    //TODO: inform enemy of the attack
+                else if (request.startsWith("attack") && !request.startsWith("attack-result")) {
+                    int row = 0;
+                    int col = 0;
+
+                    //attack|row,col
+                    request = request.replace("attack|", "");
+                    row = Integer.parseInt(request.split(",")[0]);
+                    col = Integer.parseInt(request.split(",")[1]);
+
+                    enemy.out.writeUTF("incoming-attack|" + row + "," + col);
                 }
-                else if (false) { //TODO: Handle Attack Result
-                    // TODO: Notify the attacker about the result of their attack (hit or miss)
+                else if (request.startsWith("attack-result")) {
+
+                    request = request.replace("attack-result|", "");
+                    enemy.out.writeUTF("enemy-result|" + request);
+                    enemy.out.flush();
                 }
-                //TODO(for later): handle winning and losing
+                else if (request.equals("enemy-won")) {
+                    enemy.out.writeUTF("win");
+                    enemy.out.flush();
+                }
+                else if (request.equals("gameover")) {
+                    out.writeUTF("gameover"); //to terminate ClientNetworkReceiver
+                    out.flush();
+                    return;
+                }
             }
+        } catch (IOException e) {
+            throw new RuntimeException(e);
         } finally
         {
-            // close in
-            // close out
-            // close client
+            try {
+                in.close();
+                out.close();
+                client.close();
+            } catch (IOException e) {
+                throw new RuntimeException(e);
+            }
         }
+    }
+
+    public boolean isUsernameSet() {
+        return usernameSet;
     }
 }
